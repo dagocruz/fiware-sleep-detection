@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+#  Command Line Interface to start all services associated with the sleep sleep_detection_dashboard
+#
+#  For this tutorial the commands are merely a convenience script to run docker-compose
+#
+
+set -e
+
+if (( $# != 1 )); then
+    echo "Illegal number of parameters"
+    echo "usage: services [create|start|stop]"
+    exit 1
+fi
+
+command="$1"
+case "${command}" in
+	"help")
+        echo "usage: services [create|start|stop]"
+        ;;
+    "start")
+		echo -e "Starting three containers  \033[1;34mOrion\033[0m, \033[1;30mContext-Provider\033[0m and a \033[1;30mMongoDB\033[0m database."
+		echo -e "\033[1;34mOrion\033[0m is the context broker"
+		echo -e "\033[1;30mSleep_Detection_Dashboard\033[0m displays a web app to show the HR data received from an wearable device via the CONTEXT_BROKER"
+		echo ""
+		docker-compose --log-level ERROR -p fiware up -d --remove-orphans
+		sleep 2
+		echo "loading data"
+		./import-data
+		;;
+	"stop")
+		echo "stopping containers"
+		docker-compose --log-level ERROR -p fiware down -v --remove-orphans
+		;;
+	"create")
+		echo "Obtaining Mongo DB image"
+		docker pull mongo:3.6
+		echo "Obtaining Latest Orion Image"
+		docker pull fiware/orion
+		echo "recreate Context-Providers proxy"
+		docker build -t fiware/sleep_detection_dashboard ./dashboard_HR
+		;;
+	*)
+		echo "Command not Found."
+		echo "usage: services [create|start|stop]"
+		exit 127;
+		;;
+esac

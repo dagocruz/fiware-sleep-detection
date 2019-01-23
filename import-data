@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+#  curl commands to reload the data from the previous tutorial
+#
+#
+
+set -e
+
+
+curl () {
+  docker run --network fiware_default --rm appropriate/curl -s \
+    "$@"
+}
+
+#
+# 
+#
+
+curl -X POST \
+  'http://orion:1026/v2/op/update' \
+  -H 'Content-Type: application/json' \
+  -g -d '{
+  "actionType": "APPEND",
+  "entities": [
+  	{
+  		"id":"cicese:ngsi-ld:SMW:001",
+      "type":"Device",
+      "category": {"type":"Text", "value":"smartwatch"},
+      "OSversion": {"type":"Text", "value":"Wear OS"},
+  		"brand":{"type":"Text","value":"Huawei"},
+      "model":{"type":"Text","value":"Huawei Watch I"},
+      "refHR":{"type":"Relationship","value":"cicese:ngsi-ld:HRSensor:001"},
+      "refAC":{"type":"Relationship","value":"cicese:ngsi-ld:Acceloremeter:001"}
+  	}
+  ]
+}'
+
+curl -X POST \
+  'http://orion:1026/v2/op/update' \
+  -H 'Content-Type: application/json' \
+  -g -d '{
+  "actionType": "APPEND",
+  "entities": [
+    {
+      "id":"cicese:ngsi-ld:HRSensor:001",
+      "type":"Sensor",
+      "category": {"type":"Text", "value":"Heart-Rate"},
+      "HR":{"type":"Integer","value":0}      
+    },
+    {
+      "id":"cicese:ngsi-ld:Acceloremeter:001",
+      "type":"Sensor",
+      "category": {"type":"Text", "value":"Acceloremeter"},
+      "AC":{"type":"Float","value":{"x":0.0,"y":0.0,"z":0.0}}      
+    }
+  ]
+}'
+
+curl -iX POST \
+  --url 'http://localhost:1026/v2/subscriptions' \
+  --header 'content-type: application/json' \
+  --data '{
+  "description": "Notify me of all HR values changes",
+  "subject": {
+    "entities": [{"idPattern": ".*", "type": "Sensor"}],
+    "condition": { 
+      "attrs": [ "HR" ]
+    }
+  },
+  "notification": {
+    "http": {
+      "url": "http://context-provider:3000/subscription/hr-change"
+    }
+  }
+}'
+
+
